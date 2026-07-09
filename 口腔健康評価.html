@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>口腔の健康状態の評価</title>
+<!-- ホーム画面アプリ(PWA)設定 -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f8a8a">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="口腔評価">
+<style>
+  :root{
+    --bg:#f3f6f6;
+    --card:#ffffff;
+    --ink:#1f2d2d;
+    --muted:#5c6f6f;
+    --line:#d8e2e2;
+    --teal:#0f8a8a;
+    --teal-dark:#0a6e6e;
+    --ok:#0f8a4a;
+    --ok-bg:#e6f5ec;
+    --warn:#c0392b;
+    --warn-bg:#fdecea;
+    --high-bg:#fdecea;
+    --high-ink:#a93226;
+    --low-bg:#e6f5ec;
+    --low-ink:#0f7a45;
+    --radius:14px;
+    --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.05);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    line-height:1.6;
+    -webkit-text-size-adjust:100%;
+  }
+  .app{max-width:680px;margin:0 auto;padding:0 14px 120px;}
+  header.bar{
+    position:sticky;top:0;z-index:30;
+    background:var(--teal);
+    color:#fff;
+    margin:0 -14px 0;
+    padding:14px 16px 10px;
+    box-shadow:0 2px 8px rgba(0,0,0,.12);
+  }
+  header.bar h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.02em;}
+  header.bar p{margin:2px 0 0;font-size:12px;opacity:.85;}
+  nav.tabs{
+    display:flex;gap:6px;margin-top:12px;
+  }
+  nav.tabs button{
+    flex:1;border:0;border-radius:10px;padding:9px 0;font-size:14px;font-weight:600;
+    background:rgba(255,255,255,.18);color:#fff;cursor:pointer;
+  }
+  nav.tabs button.active{background:#fff;color:var(--teal-dark);}
+  section.view{display:none;padding-top:16px;}
+  section.view.active{display:block;}
+
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:14px 14px 16px;margin-bottom:14px;
+  }
+  .card h2{font-size:13px;color:var(--muted);margin:0 0 10px;font-weight:700;letter-spacing:.04em;}
+
+  .field{margin-bottom:12px;}
+  .field:last-child{margin-bottom:0;}
+  label.lab{display:block;font-size:13px;color:var(--muted);margin-bottom:5px;font-weight:600;}
+  input[type=text],input[type=date],textarea,select{
+    width:100%;border:1px solid var(--line);border-radius:10px;padding:11px 12px;
+    font-size:16px;font-family:inherit;color:var(--ink);background:#fcfdfd;
+  }
+  textarea{resize:vertical;min-height:64px;}
+  input:focus,textarea:focus,select:focus{outline:2px solid var(--teal);border-color:var(--teal);}
+  .row2{display:flex;gap:10px;}
+  .row2>.field{flex:1;}
+
+  /* 評価項目 */
+  .item{border-top:1px solid var(--line);padding:14px 0 12px;}
+  .item:first-of-type{border-top:0;padding-top:2px;}
+  .item .num{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:22px;height:22px;border-radius:50%;background:var(--teal);color:#fff;
+    font-size:12px;font-weight:700;margin-right:8px;flex:none;
+  }
+  .item .head{display:flex;align-items:flex-start;}
+  .item .title{font-size:15px;font-weight:700;}
+  .item .note{font-size:11px;color:var(--teal-dark);background:#e9f5f5;border-radius:6px;padding:1px 6px;margin-left:6px;white-space:nowrap;}
+  .item .guide{font-size:12px;color:var(--muted);margin:4px 0 9px 30px;}
+  .item .guide b{color:var(--warn);font-weight:600;}
+  .seg{display:flex;gap:8px;margin-left:30px;flex-wrap:wrap;}
+  .seg label{
+    position:relative;
+    flex:1;min-width:84px;text-align:center;cursor:pointer;
+    border:1.5px solid var(--line);border-radius:10px;padding:11px 6px;
+    font-size:15px;font-weight:600;color:var(--muted);background:#fcfdfd;
+    transition:.12s;user-select:none;
+  }
+  .seg input{position:absolute;opacity:0;width:0;height:0;}
+  .seg label.ok-sel{background:var(--ok-bg);border-color:var(--ok);color:var(--ok);}
+  .seg label.warn-sel{background:var(--warn-bg);border-color:var(--warn);color:var(--warn);}
+  .seg label.na-sel{background:#eef1f1;border-color:#aab6b6;color:#5c6f6f;}
+
+  /* 判定 */
+  .verdict{
+    position:sticky;bottom:74px;z-index:20;
+    border-radius:12px;padding:12px 14px;margin-bottom:14px;
+    display:flex;align-items:center;justify-content:space-between;
+    box-shadow:var(--shadow);font-weight:700;
+  }
+  .verdict.low{background:var(--low-bg);color:var(--low-ink);border:1px solid #bfe6cf;}
+  .verdict.high{background:var(--high-bg);color:var(--high-ink);border:1px solid #f3c6c0;}
+  .verdict .big{font-size:18px;}
+  .verdict .sub{font-size:12px;font-weight:600;opacity:.9;margin-top:2px;}
+
+  .save-bar{
+    position:fixed;left:0;right:0;bottom:0;z-index:40;
+    background:rgba(255,255,255,.96);backdrop-filter:blur(6px);
+    border-top:1px solid var(--line);padding:10px 14px;
+    display:flex;gap:10px;max-width:680px;margin:0 auto;
+  }
+  .btn{
+    flex:1;border:0;border-radius:12px;padding:14px 0;font-size:16px;font-weight:700;cursor:pointer;
+  }
+  .btn-primary{background:var(--teal);color:#fff;}
+  .btn-primary:active{background:var(--teal-dark);}
+  .btn-ghost{background:#eef2f2;color:var(--ink);flex:0 0 auto;padding:14px 16px;}
+
+  /* records */
+  .toolbar{display:flex;gap:10px;align-items:center;margin-bottom:12px;}
+  .toolbar select{flex:1;}
+  .btn-sm{border:0;border-radius:10px;padding:11px 14px;font-size:14px;font-weight:600;cursor:pointer;background:var(--teal);color:#fff;white-space:nowrap;}
+  .btn-sm.ghost{background:#eef2f2;color:var(--ink);}
+  .rec{border:1px solid var(--line);border-radius:12px;padding:12px 12px 10px;margin-bottom:10px;background:#fff;box-shadow:var(--shadow);}
+  .rec .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+  .rec .who{font-size:16px;font-weight:700;}
+  .rec .date{font-size:13px;color:var(--muted);}
+  .pill{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:3px 10px;margin-top:6px;}
+  .pill.high{background:var(--high-bg);color:var(--high-ink);}
+  .pill.low{background:var(--low-bg);color:var(--low-ink);}
+  .rec .chips{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;}
+  .chip{font-size:11px;background:var(--warn-bg);color:var(--warn);border-radius:6px;padding:2px 7px;}
+  .rec .meta{font-size:12px;color:var(--muted);margin-top:8px;}
+  .rec .acts{display:flex;gap:8px;margin-top:10px;}
+  .rec .acts button{border:0;background:#eef2f2;color:var(--ink);border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600;cursor:pointer;}
+  .rec .acts button.del{background:#fdecea;color:var(--warn);}
+  .empty{text-align:center;color:var(--muted);padding:40px 10px;font-size:14px;}
+  .hint{font-size:12px;color:var(--muted);margin:-4px 0 10px;}
+
+  /* 施設・ユニット登録（設定タブ） */
+  .fac-card{border:1px solid var(--line); border-radius:10px; padding:10px; margin-top:10px;}
+  .fac-head{display:flex; align-items:center; gap:8px;}
+  .unit-chip{display:inline-flex; align-items:center; gap:4px; background:#e9f5f5;
+    color:var(--teal-dark); border-radius:999px; padding:5px 6px 5px 10px; margin:6px 6px 0 0; font-size:13px; font-weight:600;}
+  .unit-chip.dragging{opacity:.55; outline:2px dashed var(--teal); cursor:grabbing;}
+  .unit-chip .grip{opacity:.5; font-size:11px; letter-spacing:-1px;}
+  .unit-chip button{border:none; background:none; color:var(--teal-dark); font-size:15px; padding:0 2px; cursor:pointer;}
+  .del-btn{border:1px solid var(--line); background:#fff; border-radius:8px;
+    padding:8px 12px; font-size:13px; font-weight:600; color:var(--warn); cursor:pointer;}
+
+  .toast{
+    position:fixed;left:50%;bottom:90px;transform:translateX(-50%) translateY(20px);
+    background:#1f2d2d;color:#fff;padding:11px 20px;border-radius:999px;font-size:14px;font-weight:600;
+    opacity:0;pointer-events:none;transition:.25s;z-index:60;box-shadow:0 6px 20px rgba(0,0,0,.25);
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .toast.action{border-radius:16px;padding:10px 10px 10px 18px;pointer-events:auto;display:flex;align-items:center;gap:10px;}
+  .toast.action .tbtn{border:0;background:rgba(255,255,255,.22);color:#fff;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
+
+  /* 前回との比較表示 */
+  .prevhint{font-size:12px;color:var(--teal-dark);background:#eef6f6;border-radius:8px;padding:4px 10px;margin:0 0 9px 30px;display:inline-block;}
+  .prevhint b{color:var(--ink);}
+  .seg label.prevopt::after{content:'前回';position:absolute;top:-9px;right:-6px;background:var(--teal);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:9px;box-shadow:0 1px 3px rgba(0,0,0,.18);}
+
+  /* 連携・同期 */
+  .syncbar{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .syncstat{font-size:13px;font-weight:600;flex:1;}
+  .syncstat.ok{color:var(--ok);}
+  .syncstat.warn{color:var(--warn);}
+  .syncstat.off{color:var(--muted);}
+  .settings.card h2{margin-bottom:10px;}
+  .settings .field input{font-size:14px;}
+  .badge{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:2px 7px;margin-left:8px;vertical-align:middle;}
+  .badge.ok{background:var(--ok-bg);color:var(--ok);}
+  .badge.warn{background:var(--warn-bg);color:var(--warn);}
+
+  /* 入力画面の施設・ユニット見出しバー */
+  .placebar{display:flex;align-items:center;justify-content:space-between;gap:8px;
+    background:#e9f5f5;border:1px solid #cfe6e6;border-radius:12px;padding:11px 14px;margin-bottom:14px;cursor:pointer;}
+  .placebar #placeBarText{font-size:14px;font-weight:700;color:var(--teal-dark);}
+  .placebar.unset{background:var(--warn-bg);border-color:#f3c6c0;}
+  .placebar.unset #placeBarText{color:var(--warn);}
+  .placebar-edit{font-size:13px;font-weight:700;color:var(--teal);white-space:nowrap;}
+
+  @media print{
+    header.bar,nav.tabs,.save-bar,.toolbar,.rec .acts,.toast{display:none!important;}
+    .guide,.prevhint,.hint,#carryHint,.placebar,.syncbar,#filterResident{display:none!important;}
+    body{background:#fff;}
+    .card{box-shadow:none;}
+    .verdict{position:static;box-shadow:none;}
+    .seg label{border:1px solid #ccc;}
+    .seg label.ok-sel,.seg label.warn-sel{border-width:2px;}
+    .seg input{display:none;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <h1>口腔の健康状態の評価</h1>
+    <p>厚生労働省 評価項目（介護職員向け・2択チェック）</p>
+    <nav class="tabs">
+      <button id="tab-input" class="active" onclick="showView('input')">入力</button>
+      <button id="tab-records" onclick="showView('records')">記録一覧</button>
+      <button id="tab-settings" onclick="showView('settings')">設定</button>
+    </nav>
+  </header>
+
+  <!-- ========== 入力 ========== -->
+  <section id="view-input" class="view active">
+    <div class="placebar" id="placeBar" onclick="showView('settings')">
+      <span id="placeBarText"></span>
+      <span class="placebar-edit">設定 ›</span>
+    </div>
+    <div class="card">
+      <h2>基本情報</h2>
+      <div class="field">
+        <label class="lab">利用者名</label>
+        <input type="text" id="resident" list="resident-list" placeholder="例）山田 花子" autocomplete="off">
+        <datalist id="resident-list"></datalist>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label class="lab">評価日</label>
+          <input type="date" id="evalDate">
+        </div>
+        <div class="field">
+          <label class="lab">記入者</label>
+          <input type="text" id="recorder" placeholder="職員名">
+        </div>
+      </div>
+      <p class="hint" id="carryHint" style="display:none;"></p>
+    </div>
+
+    <div class="card">
+      <h2>評価項目（該当する方を選択）</h2>
+      <div id="items"></div>
+    </div>
+
+    <div class="verdict low" id="verdict">
+      <div>
+        <div class="big" id="verdictText">歯科確認の必要性：低い</div>
+        <div class="sub" id="verdictSub">項目1〜8で該当（あり／できない）はありません</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 記録一覧 ========== -->
+  <section id="view-records" class="view">
+    <div class="toolbar">
+      <select id="filterResident" onchange="renderRecords()">
+        <option value="">すべての利用者</option>
+      </select>
+      <button class="btn-sm ghost" onclick="exportCsv()">CSV出力</button>
+      <button class="btn-sm ghost" onclick="window.print()">印刷</button>
+    </div>
+    <div class="syncbar">
+      <span id="syncStatus" class="syncstat off">未連携（端末内のみ保存）</span>
+      <button class="btn-sm" id="syncBtn" onclick="syncAll()" style="display:none;">未送信を送信</button>
+      <button class="btn-sm ghost" onclick="showView('settings')">設定</button>
+    </div>
+    <div id="recordsList"></div>
+  </section>
+
+  <!-- ========== 設定 ========== -->
+  <section id="view-settings" class="view">
+    <div class="card">
+      <h2>現在の記録先</h2>
+      <div class="row2">
+        <div class="field">
+          <label class="lab">施設</label>
+          <select id="selFacility"></select>
+        </div>
+        <div class="field">
+          <label class="lab">ユニット</label>
+          <select id="selUnit"></select>
+        </div>
+      </div>
+      <p class="hint" style="margin-top:8px;">選ぶとすぐに記録先として保存されます。下の欄で施設・ユニットを登録してから選んでください。</p>
+    </div>
+
+    <div class="card" id="setLock" style="display:none">
+      <h2>🔒 設定はロックされています</h2>
+      <p class="hint">施設・ユニットの編集と暗証番号の変更は、管理者用の暗証番号を知っている職員のみ行えます。</p>
+      <button class="btn-sm" onclick="enterAdminMode()">🔒 管理者モードに入る</button>
+    </div>
+    <div id="setBody">
+      <div class="card">
+        <h2>施設・ユニットの登録</h2>
+        <p class="hint">ここで登録した施設とユニットが「現在の記録先」のプルダウンに表示されます。ユニットはドラッグ&amp;ドロップで並び替えでき、その順番でプルダウンに表示されます。</p>
+        <div class="row2">
+          <div class="field" style="flex:1;">
+            <input type="text" id="newFacility" placeholder="施設名（例）○○の家" autocomplete="off">
+          </div>
+          <button class="btn-sm" onclick="addFacility()">追加</button>
+        </div>
+        <div id="facilityList"></div>
+      </div>
+      <div class="card">
+        <h2>ダウンロード権限（管理者用暗証番号）</h2>
+        <p class="hint">暗証番号を設定すると、この設定タブの編集は「管理者モード」に入った職員だけが行えるようになります。番号は他の職員に共有しないでください。</p>
+        <div id="pinArea"></div>
+      </div>
+      <div class="card">
+        <h2>Googleスプレッドシート連携</h2>
+        <div class="field">
+          <label class="lab">GASウェブアプリのURL（…/exec）</label>
+          <input type="text" id="webappUrl" placeholder="https://script.google.com/macros/s/＿＿＿/exec" autocomplete="off">
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-sm" onclick="saveSheetUrl()">保存</button>
+          <button class="btn-sm ghost" onclick="testConnection()">接続テスト</button>
+        </div>
+        <p class="hint" style="margin-top:8px;">保存時に自動でシートへ送信します。未設定でもアプリは使えます（データは端末内に保存）。設定手順は同梱の「口腔健康評価_GAS.gs」を参照。</p>
+      </div>
+      <div class="card">
+        <h2>設定を他の端末にコピー</h2>
+        <p class="hint">この端末の設定（施設・ユニット・暗証番号・スプレッドシート連携URL）を「設定コード」として書き出し、他の端末で読み込めば同じ設定にできます。記録データは含まれません。</p>
+        <button class="btn-sm" onclick="exportSettings()">📋 設定コードを書き出す（コピー）</button>
+        <textarea id="settingsCode" rows="3" placeholder="他の端末で書き出した設定コードをここに貼り付けて「読み込む」を押してください" style="margin-top:10px;"></textarea>
+        <button class="btn-sm" style="margin-top:10px" onclick="importSettings()">📥 設定コードを読み込む</button>
+      </div>
+      <p class="hint">設定はこの端末のブラウザ内に保存されます。端末ごとに設定が必要です（上の「設定コード」で一括コピーできます）。</p>
+    </div>
+  </section>
+</div>
+
+<div class="save-bar" id="saveBar">
+  <button class="btn-ghost" onclick="resetForm(true)">クリア</button>
+  <button class="btn-ghost" onclick="window.print()">印刷</button>
+  <button class="btn btn-primary" onclick="saveRecord()">この内容で保存</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ 評価項目の定義 ============ */
+const SCALE = {
+  dekiru:   [{v:'できる', caution:false}, {v:'できない', caution:true}],
+  ari:      [{v:'なし',   caution:false}, {v:'あり',     caution:true}],
+};
+const NA = {v:'未実施', caution:false, na:true}; // 対象外（判定に含めない）
+
+const ITEMS = [
+  {id:1, title:'開口',            short:'開口',   options:SCALE.dekiru, guide:'前歯の間に指2本（縦）入らない、開口量3cm以下'},
+  {id:2, title:'歯の汚れ',        short:'歯の汚れ', options:SCALE.ari,    guide:'歯の表面や歯間に白・黄色の汚れがある'},
+  {id:3, title:'舌の汚れ',        short:'舌の汚れ', options:SCALE.ari,    guide:'舌の表面に白・黄・茶・黒の汚れがある'},
+  {id:4, title:'歯肉の腫れ・出血', short:'歯肉',   options:SCALE.ari,    guide:'歯肉が腫れている、歯磨きやケアで出血する'},
+  {id:5, title:'奥歯でしっかりかみしめられる', short:'かみしめ', options:SCALE.dekiru, guide:'本人にかみしめられない自覚がある、義歯を入れても奥歯がない部分がある'},
+  {id:6, title:'むせ',            short:'むせ',   options:SCALE.ari,    guide:'平時や食事中のむせ、食後の痰がらみ・声の変化・息切れがある'},
+  {id:7, title:'ぶくぶくうがい',  short:'うがい', note:'※1', options:[...SCALE.dekiru, NA], guide:'口に水をためられない、頬を膨らませられない・左右に動かせない（歯磨き後にうがいをする場合のみ）'},
+  {id:8, title:'食物のため込み・残留', short:'ため込み', note:'※2', options:[...SCALE.ari, NA], guide:'食事中に飲み込まず口にためる、飲み込んだ後に食物が残る（食事の観察が可能な場合に確認）'},
+];
+const OTHER_ID = 9;
+
+const STORE_KEY = 'koku_kenko_records_v1';
+const URL_KEY = 'koku_webapp_url';
+const OLD_FACILITY_KEY = 'koku_last_facility';   // 旧・施設名の前回値（移行用に読むだけ）
+const OLD_UNIT_KEY = 'koku_last_unit';            // 旧・ユニット名の前回値（移行用に読むだけ）
+const RECORDER_KEY = 'koku_last_recorder';    // 記入者名の前回値
+const SETTINGS_KEY = 'koku_settings';         // 施設・ユニットの登録マスタ
+const LASTLOC_KEY = 'koku_lastloc';           // 現在選択中の施設・ユニット
+const ADMIN_KEY = 'koku_admin';               // 管理者用暗証番号（ハッシュ）
+const PIN_FAIL_KEY = 'koku_pin_fail';         // 暗証番号の連続失敗記録
+let prevRecord = null;   // 入力中の利用者の直近記録（前回比較用）
+let editingId = null;    // 編集元の記録ID（比較対象から除外）
+
+/* ===== 旧バージョンからの設定移行（1回だけ） ===== */
+function migrateOldPlace(){
+  if(localStorage.getItem(SETTINGS_KEY)) return;
+  const oldF = (localStorage.getItem(OLD_FACILITY_KEY)||'').trim();
+  const oldU = (localStorage.getItem(OLD_UNIT_KEY)||'').trim();
+  if(!oldF && !oldU) return;
+  const settings = { facilities: oldF ? [{ name: oldF, units: oldU ? [oldU] : [] }] : [] };
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  localStorage.setItem(LASTLOC_KEY, JSON.stringify({ f: oldF, u: oldU }));
+}
+
+/* ============ 画面切替 ============ */
+function showView(v){
+  document.querySelectorAll('.view').forEach(s=>s.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  ['input','records','settings'].forEach(t=>{
+    const btn = document.getElementById('tab-'+t);
+    if(btn) btn.classList.toggle('active', v===t);
+  });
+  document.getElementById('saveBar').style.display = v==='input' ? 'flex' : 'none';
+  if(v==='input'){ updatePlaceBar(); }
+  if(v==='records'){ refreshFilter(); renderRecords(); updateSyncStatus(); }
+  if(v==='settings'){ renderLocSelects(); renderSetView(); }
+  window.scrollTo(0,0);
+}
+
+/* ============ 入力フォーム生成 ============ */
+function buildForm(){
+  const wrap = document.getElementById('items');
+  let html = '';
+  ITEMS.forEach(it=>{
+    html += `<div class="item" data-item="${it.id}">
+      <div class="head"><span class="num">${it.id}</span>
+        <div><span class="title">${it.title}</span>${it.note?`<span class="note">${it.note}</span>`:''}</div>
+      </div>
+      <div class="guide"><b>要注意の目安：</b>${it.guide}</div>
+      <div class="prevhint" id="prev${it.id}" style="display:none;"></div>
+      <div class="seg" data-id="${it.id}">`;
+    it.options.forEach((o,i)=>{
+      const cls = o.na ? 'na' : (o.caution ? 'warn' : 'ok');
+      html += `<label data-cls="${cls}">
+        <input type="radio" name="item${it.id}" value="${o.v}" data-caution="${o.caution?1:0}" data-na="${o.na?1:0}">
+        ${o.v}</label>`;
+    });
+    html += `</div></div>`;
+  });
+  // その他 自由記載
+  html += `<div class="item">
+    <div class="head"><span class="num">${OTHER_ID}</span><div><span class="title">その他（自由記載）</span></div></div>
+    <div class="guide">痛み、口の乾燥、口臭、義歯の汚れ・脱離、薬の残留など気になる点</div>
+    <div class="prevhint" id="prev${OTHER_ID}" style="display:none;"></div>
+    <div style="margin-left:30px"><textarea id="other" placeholder="気になる点があれば記入"></textarea></div>
+  </div>`;
+  wrap.innerHTML = html;
+
+  wrap.querySelectorAll('.seg').forEach(seg=>{
+    seg.addEventListener('change', ()=>{
+      seg.querySelectorAll('label').forEach(l=>{
+        const inp = l.querySelector('input');
+        l.classList.remove('ok-sel','warn-sel','na-sel');
+        if(inp.checked){
+          const c = l.getAttribute('data-cls');
+          l.classList.add(c==='warn'?'warn-sel':c==='na'?'na-sel':'ok-sel');
+        }
+      });
+      updateVerdict();
+    });
+  });
+}
+
+/* ============ 判定 ============ */
+function collectValues(){
+  const vals = {};
+  ITEMS.forEach(it=>{
+    const sel = document.querySelector(`input[name="item${it.id}"]:checked`);
+    vals[it.id] = sel ? sel.value : '';
+  });
+  vals[OTHER_ID] = document.getElementById('other').value.trim();
+  return vals;
+}
+function computeCaution(vals){
+  const list = [];
+  ITEMS.forEach(it=>{
+    const sel = document.querySelector(`input[name="item${it.id}"]:checked`);
+    if(sel && sel.getAttribute('data-caution')==='1') list.push(it.short);
+  });
+  return list;
+}
+function answeredCount(){
+  return ITEMS.filter(it=>document.querySelector(`input[name="item${it.id}"]:checked`)).length;
+}
+function updateVerdict(){
+  const cautions = computeCaution(collectValues());
+  const box = document.getElementById('verdict');
+  const txt = document.getElementById('verdictText');
+  const sub = document.getElementById('verdictSub');
+  const high = cautions.length>0;
+  box.classList.toggle('high', high);
+  box.classList.toggle('low', !high);
+  txt.textContent = '歯科確認の必要性：' + (high?'高い':'低い');
+  if(high){
+    sub.textContent = `該当 ${cautions.length} 件：${cautions.join('・')}`;
+  }else{
+    const left = 8 - answeredCount();
+    sub.textContent = left>0 ? `未入力 ${left} 項目（あり／できないはまだ0件）` : '項目1〜8で該当（あり／できない）はありません';
+  }
+}
+
+/* 前回の記録を各項目の上に表示し、前回選んだ選択肢に「前回」マークを付ける */
+function renderPrevComparison(){
+  ITEMS.forEach(it=>{
+    const ph = document.getElementById('prev'+it.id);
+    const seg = document.querySelector(`.seg[data-id="${it.id}"]`);
+    if(seg) seg.querySelectorAll('label').forEach(l=>l.classList.remove('prevopt'));
+    if(!ph) return;
+    const prevVal = prevRecord && prevRecord.items ? prevRecord.items[it.id] : '';
+    if(!prevVal){ ph.style.display='none'; ph.innerHTML=''; return; }
+    ph.style.display='inline-block';
+    ph.innerHTML = `前回（${esc(prevRecord.date)}）：<b>${esc(prevVal)}</b>`;
+    if(seg) seg.querySelectorAll('label').forEach(l=>{
+      const inp = l.querySelector('input');
+      if(inp && inp.value===prevVal) l.classList.add('prevopt');
+    });
+  });
+  // その他（自由記載）の前回値
+  const ph9 = document.getElementById('prev'+OTHER_ID);
+  if(ph9){
+    const prevOther = prevRecord && prevRecord.items ? (prevRecord.items[OTHER_ID]||'') : '';
+    if(prevOther){ ph9.style.display='inline-block'; ph9.innerHTML = `前回：<b>${esc(prevOther)}</b>`; }
+    else{ ph9.style.display='none'; ph9.innerHTML=''; }
+  }
+}
+
+/* ============ 保存 ============ */
+function loadAll(){ try{return JSON.parse(localStorage.getItem(STORE_KEY))||[];}catch(e){return [];} }
+function saveAll(arr){ localStorage.setItem(STORE_KEY, JSON.stringify(arr)); }
+
+function saveRecord(){
+  const resident = document.getElementById('resident').value.trim();
+  const date = document.getElementById('evalDate').value;
+  const recorder = document.getElementById('recorder').value.trim();
+  const loc = loadLastLoc();
+  const facility = loc.f || '';   // 設定タブの「現在の記録先」で選んだ値
+  const unit = loc.u || '';
+  if(!resident){ toast('利用者名を入力してください'); document.getElementById('resident').focus(); return; }
+  if(!date){ toast('評価日を入力してください'); return; }
+  if(answeredCount()===0){ toast('評価項目を選択してください'); return; }
+
+  const vals = collectValues();
+  const cautions = computeCaution(vals);
+  const items = {};
+  ITEMS.forEach(it=> items[it.id]=vals[it.id]);
+  items[OTHER_ID] = vals[OTHER_ID];
+
+  const isEditing = !!editingId;
+  const rec = {
+    id: isEditing ? editingId : Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+    resident, date, recorder, facility, unit,
+    items,
+    cautionItems: cautions,
+    judgment: cautions.length>0 ? '高い' : '低い',
+    synced: false,
+    createdAt: new Date().toISOString()
+  };
+  let all = loadAll();
+  if(isEditing) all = all.filter(r => r.id !== editingId);
+  all.push(rec);
+  saveAll(all);
+  if(recorder) localStorage.setItem(RECORDER_KEY, recorder);
+  if(isEditing){ toast('上書き保存しました'); } else { toastAction('保存しました', '次の利用者へ →', goNextUser); }
+  resetForm(false);
+  refreshResidentList();
+
+  // Googleスプレッドシートへ自動送信（URL設定時のみ）
+  if(sheetUrl()){
+    sendToSheet(rec).then(res=>{
+      if(res && res.ok){ markSynced(rec.id); toast('保存＆シートに送信しました'); }
+      else{ toast('保存しました（シート未送信：あとで再送信できます）'); }
+      if(document.getElementById('view-records').classList.contains('active')){ renderRecords(); updateSyncStatus(); }
+    });
+  }
+}
+
+function resetForm(clearBasic){
+  editingId = null;
+  document.querySelectorAll('#items input[type=radio]').forEach(r=>r.checked=false);
+  document.querySelectorAll('#items .seg label').forEach(l=>l.classList.remove('ok-sel','warn-sel','na-sel'));
+  document.getElementById('other').value='';
+  if(clearBasic){
+    document.getElementById('resident').value='';
+    document.getElementById('recorder').value='';
+  }
+  document.getElementById('evalDate').value = today();
+  onResidentInput();   // prevRecord と前回ヒントを更新
+  updateVerdict();
+  window.scrollTo(0,0);
+}
+
+/* ============ 前回値の引き継ぎ・前回比較 ============ */
+function latestRecordFor(name, excludeId){
+  const all = loadAll().filter(r=>r.resident===name && r.id!==excludeId);
+  if(!all.length) return null;
+  all.sort((a,b)=> (a.date<b.date?1:-1) || (a.createdAt<b.createdAt?1:-1));
+  return all[0];
+}
+function onResidentInput(){
+  const name = document.getElementById('resident').value.trim();
+  prevRecord = name ? latestRecordFor(name, editingId) : null;
+  const hint = document.getElementById('carryHint');
+  if(prevRecord && !editingId){
+    hint.style.display='block';
+    hint.innerHTML = `前回（${esc(prevRecord.date)}・${prevRecord.judgment}）の記録があります。<a href="#" onclick="carryLast('${prevRecord.id}');return false;" style="color:var(--teal-dark);font-weight:600;">前回値を読み込む</a>`;
+  }else{
+    hint.style.display='none';
+  }
+  renderPrevComparison();
+}
+function carryLast(id){
+  const rec = loadAll().find(r=>r.id===id);
+  if(!rec) return;
+  ITEMS.forEach(it=>{
+    const v = rec.items[it.id];
+    const inp = document.querySelector(`input[name="item${it.id}"][value="${v}"]`);
+    if(inp){ inp.checked=true; }
+  });
+  document.querySelectorAll('#items .seg').forEach(seg=>seg.dispatchEvent(new Event('change')));
+  document.getElementById('other').value = rec.items[OTHER_ID]||'';
+  if(rec.recorder) document.getElementById('recorder').value = rec.recorder;
+  toast('前回値を読み込みました');
+}
+
+/* ============ 記録一覧 ============ */
+function refreshFilter(){
+  const sel = document.getElementById('filterResident');
+  const cur = sel.value;
+  const names = [...new Set(loadAll().map(r=>r.resident))].sort();
+  sel.innerHTML = '<option value="">すべての利用者</option>' + names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  if([...sel.options].some(o=>o.value===cur)) sel.value=cur;
+}
+function renderRecords(){
+  const filter = document.getElementById('filterResident').value;
+  let all = loadAll();
+  if(filter) all = all.filter(r=>r.resident===filter);
+  all.sort((a,b)=> (a.date<b.date?1:-1) || (a.createdAt<b.createdAt?1:-1));
+  const wrap = document.getElementById('recordsList');
+  if(!all.length){ wrap.innerHTML = '<div class="empty">まだ記録がありません。<br>「入力」タブから登録してください。</div>'; return; }
+  const urlSet = !!sheetUrl();
+  wrap.innerHTML = all.map(r=>{
+    const caution = r.cautionItems||[];
+    const chips = caution.length ? `<div class="chips">${caution.map(c=>`<span class="chip">${esc(c)}</span>`).join('')}</div>` : '';
+    const place = [r.facility, r.unit].filter(Boolean).join(' / ');
+    const placeMeta = place ? `<div class="meta">${esc(place)}</div>` : '';
+    const other = r.items[OTHER_ID] ? `<div class="meta">その他：${esc(r.items[OTHER_ID])}</div>` : '';
+    const syncBadge = urlSet ? (r.synced ? '<span class="badge ok">✓ 同期済み</span>' : '<span class="badge warn">未送信</span>') : '';
+    return `<div class="rec">
+      <div class="top"><span class="who">${esc(r.resident)}</span><span class="date">${esc(r.date)}</span></div>
+      ${placeMeta}
+      <span class="pill ${r.judgment==='高い'?'high':'low'}">歯科確認：${r.judgment}</span>${syncBadge}
+      ${chips}
+      ${other}
+      <div class="meta">記入者：${esc(r.recorder)||'—'}</div>
+      <div class="acts">
+        <button onclick="loadToForm('${r.id}')">編集</button>
+        <button class="del" onclick="delRecord('${r.id}')">削除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function delRecord(id){
+  if(!confirm('この記録を削除しますか？')) return;
+  saveAll(loadAll().filter(r=>r.id!==id));
+  renderRecords(); refreshFilter(); refreshResidentList(); updateSyncStatus();
+  toast('削除しました');
+}
+function loadToForm(id){
+  const rec = loadAll().find(r=>r.id===id);
+  if(!rec) return;
+  editingId = rec.id;
+  showView('input');
+  document.getElementById('resident').value = rec.resident;
+  document.getElementById('evalDate').value = rec.date;
+  document.getElementById('recorder').value = rec.recorder||'';
+  resetItemsOnly();
+  carryLast(id);
+  onResidentInput();
+  toast('読み込みました（保存で上書きされます）');
+}
+function resetItemsOnly(){
+  document.querySelectorAll('#items input[type=radio]').forEach(r=>r.checked=false);
+  document.querySelectorAll('#items .seg label').forEach(l=>l.classList.remove('ok-sel','warn-sel','na-sel'));
+}
+
+/* ============ CSV出力 ============ */
+function exportCsv(){
+  const filter = document.getElementById('filterResident').value;
+  let all = loadAll();
+  if(filter) all = all.filter(r=>r.resident===filter);
+  if(!all.length){ toast('出力する記録がありません'); return; }
+  all.sort((a,b)=> (a.date<b.date?-1:1));
+  const headers = ['評価日','施設名','ユニット名','利用者名','記入者',
+    ...ITEMS.map(it=>it.title), 'その他',
+    '歯科確認の必要性','該当項目'];
+  const rows = all.map(r=>[
+    r.date, r.facility||'', r.unit||'', r.resident, r.recorder||'',
+    ...ITEMS.map(it=>r.items[it.id]||''),
+    r.items[OTHER_ID]||'',
+    r.judgment, (r.cautionItems||[]).join('・')
+  ]);
+  const csv = [headers, ...rows].map(row=>row.map(csvCell).join(',')).join('\r\n');
+  const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = today();
+  a.href = url;
+  a.download = `口腔健康評価_${filter||'全員'}_${stamp}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  toast('CSVを書き出しました');
+}
+function csvCell(v){ v=String(v??''); return /[",\r\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }
+
+/* ============ Googleスプレッドシート連携（JSONP） ============ */
+function sheetUrl(){ return (localStorage.getItem(URL_KEY)||'').trim(); }
+
+function jsonpGet(params){
+  return new Promise((resolve)=>{
+    const url = sheetUrl();
+    if(!url){ resolve({ok:false, reason:'no-url'}); return; }
+    const cb = '__kokucb_' + Date.now() + Math.floor(Math.random()*100000);
+    const s = document.createElement('script');
+    let done = false;
+    const cleanup = ()=>{ try{ delete window[cb]; }catch(e){ window[cb]=undefined; } if(s.parentNode) s.remove(); };
+    const timer = setTimeout(()=>{ if(done) return; done=true; cleanup(); resolve({ok:false, reason:'timeout'}); }, 12000);
+    window[cb] = (res)=>{ if(done) return; done=true; clearTimeout(timer); cleanup(); resolve(res||{ok:false, reason:'empty'}); };
+    s.onerror = ()=>{ if(done) return; done=true; clearTimeout(timer); cleanup(); resolve({ok:false, reason:'neterror'}); };
+    let qs = 'callback=' + cb;
+    Object.keys(params).forEach(k=>{ qs += '&' + k + '=' + encodeURIComponent(params[k]); });
+    s.src = url + (url.indexOf('?')>=0 ? '&' : '?') + qs;
+    document.body.appendChild(s);
+  });
+}
+function sheetPayload(rec){
+  return {
+    id: rec.id, date: rec.date, facility: rec.facility, unit: rec.unit,
+    resident: rec.resident, recorder: rec.recorder,
+    items: rec.items, judgment: rec.judgment,
+    cautionItems: rec.cautionItems||[]
+  };
+}
+function sendToSheet(rec){ return jsonpGet({ payload: JSON.stringify(sheetPayload(rec)) }); }
+function markSynced(id){
+  const all = loadAll();
+  const r = all.find(x=>x.id===id);
+  if(r){ r.synced = true; saveAll(all); }
+}
+function updateSyncStatus(){
+  const status = document.getElementById('syncStatus');
+  const btn = document.getElementById('syncBtn');
+  if(!status) return;
+  if(!sheetUrl()){
+    status.textContent = '未連携（端末内のみ保存）'; status.className = 'syncstat off';
+    if(btn) btn.style.display = 'none';
+    return;
+  }
+  const pending = loadAll().filter(r=>!r.synced).length;
+  if(pending>0){
+    status.textContent = `未送信 ${pending}件`; status.className = 'syncstat warn';
+    if(btn) btn.style.display = 'inline-block';
+  }else{
+    status.textContent = 'すべて同期済み'; status.className = 'syncstat ok';
+    if(btn) btn.style.display = 'none';
+  }
+}
+function updatePlaceBar(){
+  const bar = document.getElementById('placeBar');
+  const txt = document.getElementById('placeBarText');
+  if(!bar || !txt) return;
+  const loc = loadLastLoc();
+  const f = loc.f || '', u = loc.u || '';
+  if(f || u){
+    bar.classList.remove('unset');
+    txt.textContent = `施設：${f||'（未設定）'}　ユニット：${u||'（未設定）'}`;
+  }else{
+    bar.classList.add('unset');
+    txt.textContent = '施設・ユニットが未設定です（タップして設定）';
+  }
+}
+function saveSheetUrl(){
+  const v = document.getElementById('webappUrl').value.trim();
+  localStorage.setItem(URL_KEY, v);
+  toast(v ? '連携URLを保存しました' : '連携URLを消去しました');
+  updateSyncStatus(); renderRecords();
+}
+function testConnection(){
+  if(!sheetUrl()){ toast('先にURLを保存してください'); return; }
+  toast('接続テスト中…');
+  jsonpGet({ ping: 1 }).then(res=>{
+    if(res && res.ok) toast('接続OK：' + (res.message||'応答あり'));
+    else toast('接続失敗（' + (res && (res.reason||res.error) || '不明') + '）URLとデプロイを確認');
+  });
+}
+async function syncAll(){
+  if(!sheetUrl()){ toast('設定でURLを保存してください'); showView('settings'); return; }
+  const pending = loadAll().filter(r=>!r.synced);
+  if(!pending.length){ toast('未送信はありません'); return; }
+  toast(`未送信 ${pending.length}件を送信中…`);
+  let ok = 0;
+  for(const r of pending){
+    const res = await sendToSheet(r);
+    if(res && res.ok){ markSynced(r.id); ok++; }
+  }
+  renderRecords(); updateSyncStatus();
+  toast(`${ok}/${pending.length}件を送信しました`);
+}
+
+/* ===== 施設・ユニット設定 ===== */
+function loadSettings(){
+  try{
+    const s = JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{"facilities":[]}');
+    return (s && Array.isArray(s.facilities)) ? s : {facilities:[]};
+  }catch(e){ return {facilities:[]}; }
+}
+function saveSettings(s){ localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
+
+function addFacility(){
+  const inp = document.getElementById('newFacility');
+  const name = inp.value.trim();
+  if(!name) return;
+  const s = loadSettings();
+  if(s.facilities.some(f=>f.name===name)){ toast('同じ名前の施設が登録済みです'); return; }
+  s.facilities.push({name:name, units:[]});
+  saveSettings(s); inp.value = '';
+  renderSettings(); renderLocSelects();
+}
+
+function renderSettings(){
+  const s = loadSettings();
+  const list = document.getElementById('facilityList');
+  list.innerHTML = '';
+  if(s.facilities.length===0){
+    list.innerHTML = '<div class="empty">まだ施設が登録されていません。<br>上の欄に施設名を入れて「追加」を押してください。</div>';
+    return;
+  }
+  s.facilities.forEach((f,i)=>{
+    const card = document.createElement('div'); card.className = 'fac-card';
+    const head = document.createElement('div'); head.className = 'fac-head';
+    const nm = document.createElement('span'); nm.textContent = f.name; nm.style.flex = '1'; nm.style.fontWeight = '700';
+    const del = document.createElement('button'); del.className = 'del-btn'; del.textContent = '削除';
+    del.onclick = ()=>{
+      if(!confirm('施設「'+f.name+'」を削除しますか？（過去の記録は消えません）')) return;
+      s.facilities.splice(i,1); saveSettings(s); renderSettings(); renderLocSelects();
+    };
+    head.appendChild(nm); head.appendChild(del); card.appendChild(head);
+    const units = document.createElement('div');
+    f.units.forEach((u,j)=>{
+      const chip = document.createElement('span'); chip.className = 'unit-chip';
+      chip.dataset.name = u;
+      const grip = document.createElement('span'); grip.className = 'grip'; grip.textContent = '⠿';
+      chip.appendChild(grip);
+      chip.appendChild(document.createTextNode(u));
+      const x = document.createElement('button'); x.textContent = '✕';
+      x.onclick = ()=>{ f.units.splice(j,1); saveSettings(s); renderSettings(); renderLocSelects(); };
+      chip.appendChild(x); units.appendChild(chip);
+      enableChipDrag(chip, f, s);
+    });
+    card.appendChild(units);
+    const row = document.createElement('div'); row.className = 'row2'; row.style.marginTop = '10px';
+    const inp = document.createElement('input'); inp.type = 'text';
+    inp.placeholder = 'ユニット名（例）2階A'; inp.style.flex = '1';
+    const add = document.createElement('button'); add.className = 'btn-sm'; add.textContent = '追加';
+    add.onclick = ()=>{
+      const v = inp.value.trim(); if(!v) return;
+      if(f.units.includes(v)){ toast('同じ名前のユニットが登録済みです'); return; }
+      f.units.push(v); saveSettings(s); renderSettings(); renderLocSelects();
+    };
+    row.appendChild(inp); row.appendChild(add); card.appendChild(row);
+    list.appendChild(card);
+  });
+}
+
+/* ユニットチップのドラッグ&ドロップ並び替え（タッチ・マウス両対応） */
+function enableChipDrag(chip, facility, settings){
+  chip.addEventListener('pointerdown', (e)=>{
+    if(e.target.tagName === 'BUTTON') return; // ✕ボタンは削除操作
+    const parent = chip.parentNode;
+    const startX = e.clientX, startY = e.clientY;
+    let dragging = false;
+    const move = (ev)=>{
+      if(!dragging){
+        if(Math.hypot(ev.clientX-startX, ev.clientY-startY) < 8) return;
+        dragging = true;
+        try{ chip.setPointerCapture(e.pointerId); }catch(err){}
+        chip.classList.add('dragging');
+      }
+      ev.preventDefault();
+      chip.style.visibility = 'hidden';
+      const under = document.elementFromPoint(ev.clientX, ev.clientY);
+      chip.style.visibility = '';
+      const over = under && under.closest ? under.closest('.unit-chip') : null;
+      if(over && over !== chip && over.parentNode === parent){
+        const r = over.getBoundingClientRect();
+        parent.insertBefore(chip, (ev.clientX < r.left + r.width/2) ? over : over.nextSibling);
+      }
+    };
+    const up = ()=>{
+      chip.removeEventListener('pointermove', move);
+      chip.removeEventListener('pointerup', up);
+      chip.removeEventListener('pointercancel', up);
+      if(!dragging) return;
+      chip.classList.remove('dragging');
+      facility.units = [...parent.querySelectorAll('.unit-chip')].map(c=>c.dataset.name);
+      saveSettings(settings);
+      renderSettings(); renderLocSelects();
+    };
+    chip.addEventListener('pointermove', move);
+    chip.addEventListener('pointerup', up);
+    chip.addEventListener('pointercancel', up);
+  });
+}
+
+/* ===== 現在の記録先（選択） ===== */
+function loadLastLoc(){
+  try{ return JSON.parse(localStorage.getItem(LASTLOC_KEY)||'{}'); }catch(e){ return {}; }
+}
+function renderLocSelects(){
+  const s = loadSettings();
+  const fSel = document.getElementById('selFacility');
+  const uSel = document.getElementById('selUnit');
+  const last = loadLastLoc();
+  fSel.innerHTML = '';
+  fSel.appendChild(new Option(s.facilities.length ? '選択してください' : '(下で登録してください)', ''));
+  s.facilities.forEach(f=>fSel.appendChild(new Option(f.name, f.name)));
+  if(s.facilities.length===1) fSel.value = s.facilities[0].name;
+  else if(last.f && s.facilities.some(f=>f.name===last.f)) fSel.value = last.f;
+  fillUnits();
+  if(last.u && [...uSel.options].some(o=>o.value===last.u)) uSel.value = last.u;
+}
+function fillUnits(){
+  const s = loadSettings();
+  const fSel = document.getElementById('selFacility');
+  const uSel = document.getElementById('selUnit');
+  uSel.innerHTML = '';
+  uSel.appendChild(new Option('選択してください', ''));
+  const f = s.facilities.find(x=>x.name===fSel.value);
+  (f ? f.units : []).forEach(u=>uSel.appendChild(new Option(u, u)));
+  if(f && f.units.length===1) uSel.value = f.units[0];
+}
+function saveLastLoc(){
+  localStorage.setItem(LASTLOC_KEY, JSON.stringify({
+    f: document.getElementById('selFacility').value,
+    u: document.getElementById('selUnit').value
+  }));
+  updatePlaceBar();
+}
+
+/* ===== ダウンロード権限（管理者用暗証番号） ===== */
+const ADMIN_MINUTES = 15;
+let adminUntil = Number(sessionStorage.getItem('koku_admin_until') || 0);
+
+async function sha256Hex(str){
+  if(window.crypto && crypto.subtle){
+    const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
+  let h1 = 0x811c9dc5;
+  for(let i=0; i<str.length; i++){ h1 ^= str.charCodeAt(i); h1 = Math.imul(h1, 0x01000193) >>> 0; }
+  return 'f' + h1.toString(16);
+}
+function pinData(){
+  try{ return JSON.parse(localStorage.getItem(ADMIN_KEY) || 'null'); }
+  catch(e){ return null; }
+}
+function pinSet(){ return !!pinData(); }
+function adminActive(){ return pinSet() && Date.now() < adminUntil; }
+
+async function verifyPin(input){
+  const d = pinData();
+  if(!d) return false;
+  return (await sha256Hex(d.salt + input)) === d.hash;
+}
+function failData(){
+  try{ return JSON.parse(localStorage.getItem(PIN_FAIL_KEY) || '{"count":0,"until":0}'); }
+  catch(e){ return {count:0, until:0}; }
+}
+async function enterAdminMode(){
+  const f = failData();
+  if(Date.now() < f.until){
+    toast('暗証番号の間違いが続いたため、1分ほど待ってからやり直してください');
+    return;
+  }
+  const input = prompt('管理者用の暗証番号を入力してください');
+  if(input == null) return;
+  if(await verifyPin(input.trim())){
+    localStorage.setItem(PIN_FAIL_KEY, '{"count":0,"until":0}');
+    adminUntil = Date.now() + ADMIN_MINUTES * 60 * 1000;
+    sessionStorage.setItem('koku_admin_until', String(adminUntil));
+    renderSetView();
+  }else{
+    const nf = {count: f.count + 1, until: 0};
+    if(nf.count >= 5){ nf.until = Date.now() + 60 * 1000; nf.count = 0; }
+    localStorage.setItem(PIN_FAIL_KEY, JSON.stringify(nf));
+    toast('暗証番号が違います');
+  }
+}
+function exitAdminMode(){
+  adminUntil = 0;
+  sessionStorage.removeItem('koku_admin_until');
+  renderSetView();
+}
+function renderPinArea(){
+  const area = document.getElementById('pinArea');
+  const set = pinSet();
+  area.innerHTML =
+    (set
+      ? '<p class="hint">✅ 設定済みです。変更・解除には現在の暗証番号が必要です。</p>'+
+        '<div class="field"><input type="password" id="pinCur" inputmode="numeric" placeholder="現在の暗証番号"></div>'
+      : '<p class="hint">未設定です。設定すると、この設定タブの編集が管理者専用になります。</p>'+
+        '<input type="hidden" id="pinCur" value="">')+
+    '<div class="field"><input type="password" id="pinNew" inputmode="numeric" placeholder="新しい暗証番号（4桁以上）"></div>'+
+    '<div style="display:flex;gap:8px;"><button class="btn-sm" onclick="savePin()">'+(set?'変更する':'設定する')+'</button>'+
+    (set ? '<button class="btn-sm ghost" onclick="clearPin()">解除</button>' : '')+
+    '</div>';
+}
+async function savePin(){
+  if(pinSet() && !(await verifyPin(document.getElementById('pinCur').value.trim()))){
+    toast('現在の暗証番号が違います'); return;
+  }
+  const nw = document.getElementById('pinNew').value.trim();
+  if(nw.length < 4){ toast('暗証番号は4桁以上にしてください'); return; }
+  const salt = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  localStorage.setItem(ADMIN_KEY, JSON.stringify({salt: salt, hash: await sha256Hex(salt + nw)}));
+  adminUntil = Date.now() + ADMIN_MINUTES * 60 * 1000;
+  sessionStorage.setItem('koku_admin_until', String(adminUntil));
+  renderPinArea();
+  toast('暗証番号を設定しました');
+}
+async function clearPin(){
+  if(!(await verifyPin(document.getElementById('pinCur').value.trim()))){
+    toast('現在の暗証番号が違います'); return;
+  }
+  if(!confirm('暗証番号を解除しますか？（誰でも設定を編集できる状態に戻ります）')) return;
+  localStorage.removeItem(ADMIN_KEY);
+  exitAdminMode();
+  renderPinArea();
+}
+
+/* 設定タブのロック制御: 暗証番号設定済み＆未解錠なら本体を隠す */
+function renderSetView(){
+  const locked = pinSet() && !adminActive();
+  document.getElementById('setLock').style.display = locked ? '' : 'none';
+  document.getElementById('setBody').style.display = locked ? 'none' : '';
+  document.getElementById('webappUrl').value = sheetUrl();
+  if(!locked){ renderSettings(); renderPinArea(); }
+}
+
+/* ===== 設定の書き出し/読み込み（端末間コピー） ===== */
+function exportSettings(){
+  const payload = {
+    t: 'koku-settings',
+    v: 1,
+    settings: loadSettings(),
+    admin: (function(){ try{ return JSON.parse(localStorage.getItem(ADMIN_KEY)||'null'); }catch(e){ return null; } })(),
+    url: sheetUrl()
+  };
+  const code = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+  const ta = document.getElementById('settingsCode');
+  ta.value = code;
+  ta.select();
+  let copied = false;
+  try{ copied = document.execCommand('copy'); }catch(e){}
+  if(navigator.clipboard){ navigator.clipboard.writeText(code).catch(()=>{}); copied = true; }
+  toast(copied ? '設定コードを書き出してコピーしました' : '設定コードを書き出しました。上の欄からコピーしてください');
+}
+function importSettings(){
+  const code = document.getElementById('settingsCode').value.trim();
+  if(!code){ toast('設定コードを貼り付けてください'); return; }
+  let payload;
+  try{
+    payload = JSON.parse(decodeURIComponent(escape(atob(code))));
+  }catch(e){ toast('設定コードを読み取れませんでした'); return; }
+  if(!payload || payload.t !== 'koku-settings'){ toast('この口腔アプリの設定コードではないようです'); return; }
+  if(!confirm('この端末の設定を、読み込んだ内容で上書きします。よろしいですか？\n（記録データはそのまま残ります）')) return;
+
+  if(payload.settings && Array.isArray(payload.settings.facilities)){
+    saveSettings(payload.settings);
+  }
+  if(payload.admin && payload.admin.hash){
+    localStorage.setItem(ADMIN_KEY, JSON.stringify(payload.admin));
+    adminUntil = Date.now() + ADMIN_MINUTES * 60 * 1000;
+    sessionStorage.setItem('koku_admin_until', String(adminUntil));
+  }
+  if(typeof payload.url === 'string'){
+    localStorage.setItem(URL_KEY, payload.url);
+  }
+  document.getElementById('settingsCode').value = '';
+  toast('設定を読み込みました');
+  renderLocSelects();
+  updatePlaceBar();
+  renderSetView();
+}
+
+/* ============ 小物 ============ */
+function refreshResidentList(){
+  const dl = document.getElementById('resident-list');
+  const names = [...new Set(loadAll().map(r=>r.resident))].sort();
+  dl.innerHTML = names.map(n=>`<option value="${esc(n)}">`).join('');
+}
+function esc(s){ return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function today(){ const d=new Date(); const z=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`; }
+let toastTimer;
+function toast(msg){
+  const t=document.getElementById('toast'); t.classList.remove('action'); t.innerHTML=''; t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),1800);
+}
+function toastAction(msg, btnLabel, fn){
+  const t=document.getElementById('toast'); t.classList.remove('action'); t.innerHTML='';
+  t.innerHTML=`<span>${msg}</span><button class="tbtn">${btnLabel}</button>`;
+  t.classList.add('show','action');
+  clearTimeout(toastTimer);
+  t.querySelector('.tbtn').addEventListener('click',()=>{ t.classList.remove('show','action'); t.innerHTML=''; fn(); });
+  toastTimer=setTimeout(()=>{ t.classList.remove('show','action'); t.innerHTML=''; },5000);
+}
+function goNextUser(){
+  document.getElementById('resident').value='';
+  onResidentInput();
+  updateVerdict();
+  window.scrollTo(0,0);
+  document.getElementById('resident').focus();
+}
+
+/* ============ 初期化 ============ */
+migrateOldPlace();
+buildForm();
+document.getElementById('evalDate').value = today();
+document.getElementById('recorder').value = localStorage.getItem(RECORDER_KEY) || '';
+document.getElementById('resident').addEventListener('input', onResidentInput);
+document.getElementById('selFacility').addEventListener('change', ()=>{ fillUnits(); saveLastLoc(); });
+document.getElementById('selUnit').addEventListener('change', saveLastLoc);
+refreshResidentList();
+renderLocSelects();
+updatePlaceBar();
+updateVerdict();
+updateSyncStatus();
+</script>
+
+<!-- オフライン動作のためのService Worker登録(対応ブラウザのみ) -->
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
