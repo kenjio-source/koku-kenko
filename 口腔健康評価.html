@@ -80,7 +80,7 @@
   input:focus,textarea:focus,select:focus{outline:2px solid var(--teal);border-color:var(--teal);}
   .row2{display:flex;gap:10px;}
   .row2>.field{flex:1;min-width:0;}
-  input[type=date]{-webkit-min-logical-width:0;text-align:left;}
+  input[type=date]{-webkit-min-logical-width:0;text-align:left;max-width:100%;overflow:hidden;}
   input[type=date]::-webkit-date-and-time-value{text-align:left;}
   /* iOSのdate入力は指定幅より広く描画されることがあるため、狭い画面では縦積みにして重なりを防ぐ */
   @media (max-width:480px){
