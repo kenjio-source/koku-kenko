@@ -80,10 +80,11 @@
   input:focus,textarea:focus,select:focus{outline:2px solid var(--teal);border-color:var(--teal);}
   .row2{display:flex;gap:10px;}
   .row2>.field{flex:1;min-width:0;}
-  /* iOSはdate入力の外枠自体を指定幅より広く描画することがあるため、
-     周りをdivで囲んでoverflow:hiddenで確実に切り取る（inputに直接かけても効かない） */
-  .date-clip{overflow:hidden;border-radius:10px;}
-  input[type=date]{-webkit-min-logical-width:0;text-align:left;}
+  /* iOSはdate入力の中身の幅で外枠を広げて描画することがあるため、
+     divでflexコンテナにしてinput自体をflexで強制的に縮ませる
+     （overflow:hiddenで囲うだけだと縮まず枠が切れて見えるだけになる） */
+  .date-clip{display:flex;overflow:hidden;border-radius:10px;}
+  input[type=date]{-webkit-min-logical-width:0;text-align:left;flex:1;min-width:0;}
   input[type=date]:focus{outline-offset:-2px;}
   input[type=date]::-webkit-date-and-time-value{text-align:left;}
   /* iOSのdate入力は指定幅より広く描画されることがあるため、狭い画面では縦積みにして重なりを防ぐ */
