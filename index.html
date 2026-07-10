@@ -81,6 +81,10 @@
   .row2{display:flex;gap:10px;}
   .row2>.field{flex:1;min-width:0;}
   input[type=date]{-webkit-min-logical-width:0;}
+  /* iOSのdate入力は指定幅より広く描画されることがあるため、狭い画面では縦積みにして重なりを防ぐ */
+  @media (max-width:480px){
+    .row2{flex-direction:column;}
+  }
 
   /* 評価項目 */
   .item{border-top:1px solid var(--line);padding:14px 0 12px;}
